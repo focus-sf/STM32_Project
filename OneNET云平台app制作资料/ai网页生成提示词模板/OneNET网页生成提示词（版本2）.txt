@@ -51,6 +51,3 @@ Token信息: "version=2018-10-31&res=products%2F15KXy59U18%2Fdevices%2Fsoil_test
 	headers: { "authorization": config.token }
 
 根据以上信息，制作一个HTML网页
-
-
-123
