@@ -1,0 +1,53 @@
+说明：这是一个升级版的OneNET云平台app制作ai生成提示词，相较于视频展示版本，该版本新增时间和天气的API地址，注意天气API地址中的密钥需要你自己前往心知天气官网申请（免费，很简单）
+
+该版本提示词没有提供模板代码，但是我已经经过多次测试，把ai可能出现的问题写在了注意事项，实测发给ai后可以，成功获取到数据
+
+如果你的ai生成出来的无法正常获取数据，那你就需要把另一个版本提示词里的模板代码发给ai，让它检查
+
+优点：使用该版本提示词，由于没有模板代码的限制，生成的网页UI界面会更多元化
+
+下方是提示词（仅供参考）：
+
+Token信息: "version=2018-10-31&res=products%2F15KXy59U18%2Fdevices%2Fsoil_test&et=1805693871&method=md5&sign=lbJDcAomzq0pgMBPJi570Q%3D%3D"
+产品ID: "15KXy59U18"
+设备名称: "soil_test"
+
+获取设备详情API地址："https://iot-api.heclouds.com/device/detail"
+获取物模型属性API地址: "https://iot-api.heclouds.com/thingmodel/query-device-property"
+设置物模型属性API地址: "https://iot-api.heclouds.com/thingmodel/set-device-property"
+设备属性历史数据查询API地址："https://iot-api.heclouds.com/thingmodel/query-device-property-history"  
+
+获取时间戳API地址："http://api.pinduoduo.com/api/server/_stm"
+获取当前天气API地址："https://api.seniverse.com/v3/weather/now.json?key=你的心知天气密钥&location=你的城市拼音小写（例如xinxiang）&language=en&unit=c"
+获取近三天天气API地址："https://api.seniverse.com/v3/weather/daily.json?key=你的心知天气密钥&location=你的城市拼音小写（例如xinxiang）&language=en&unit=c&start=0&days=3"
+
+我的OneNET物模型：
+1：土壤湿度：标识符：SoilMoisture，数据类型：float
+2：报警：标识符：Buzzer，数据类型：bool
+3：水泵：标识符：Pump，数据类型：bool
+4：环境温度：标识符：temperature，数据类型：float
+5：环境湿度：标识符：humidity，数据类型：float
+6：光照强度：标识符：light，数据类型：float
+7：水泵模式：标识符：Pump_Mode，数据类型：bool
+
+实现以下功能：
+1：可以连接OneNET云平台
+2：获取设备在线状态
+3：实现获取物模型属性功能
+4：每个物模型对应一个独立卡片分区，卡片里显示物模型当前数据，点击该卡片，可以查看该物模型的历史数据
+5：远程控制水泵的功能（这里使用两个按钮，一个打开一个关闭，点击相应按钮下发相应指令，直接显示“已执行”，不需要等待设备响应，不需要显示成功或失败，无需设备的反馈）
+6：水泵模式把true作为手动模式，false作为自动模式，有两个按钮，对应发送true和false，点击其中一个按钮，下发该指令，显示已执行，不需要等待设备响应，不需要显示成功或失败，无需设备的反馈
+7：显示当前时间
+8：显示当前天气，点击天气卡片，可以查看近三天天气
+9：要求电脑端和手机端都能正常运行，适配手机端界面，界面要求规整精美
+
+注意事项（一点要避免以下问题的出现）：
+1：API请求不要缺少必需的 product_id 和 device_name 参数，需在URL中显式传入 product_id 和 device_name，token 放在 header，例如：
+	fetch(`${config.api.deviceDetail}?product_id=${config.productId}&device_name=${config.deviceName}`,
+	 {
+    		headers: { "authorization": config.token }
+	})
+2：需要将 token 放入 HTTP 请求头 Authorization 中，例如：
+	headers: { "authorization": config.token }
+
+根据以上信息，制作一个HTML网页
