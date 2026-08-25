@@ -1,0 +1,401 @@
+Token信息: "version=2018-10-31&res=products%2FAceV67og0i%2Fdevices%2Fmytext&et=1805693871&method=md5&sign=PEUKCtejaA%2By49Qw78sOfw%3D%3D"
+产品ID: "AceV67og0i"
+设备名称: "mytext"
+
+获取设备详情API地址："https://iot-api.heclouds.com/device/detail"
+获取物模型属性API地址: "https://iot-api.heclouds.com/thingmodel/query-device-property"
+设置物模型属性API地址: "https://iot-api.heclouds.com/thingmodel/set-device-property"
+设备属性历史数据查询API地址："https://iot-api.heclouds.com/thingmodel/query-device-property-history"  
+
+物模型：
+1：温度：标识符：temperature，数据类型：float
+2：湿度：标识符：humidity，数据类型：float
+3：二氧化碳含量：标识符：co2，数据类型：int
+4：开关：标识符：key，数据类型：bool
+5：LED：标识符：LED，数据类型：string
+
+根据以上信息，制作一个HTML网页，实现以下功能：
+1：可以连接OneNET云平台
+2：获取设备在线状态
+3：实现获取物模型属性功能（开关除外）
+4：每个物模型对应一个独立卡片分区，点击该卡片，可以查看该物模型的历史数据（开关除外）
+5：远程控制开关的功能（这里使用两个按钮，一个打开一个关闭，点击相应按钮下发相应指令，直接显示“已执行”，不需要等待设备响应，不需要成功或设备的反馈）
+6：要求电脑端和手机端都能正常运行
+
+可以参考以下模板的逻辑部分（注意：里面的信息是他人的，请适配成我的），但是UI页面自行发挥（UI界面需要适配手机端,界面要求规整精美）
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>OneNET设备控制面板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: "Microsoft YaHei", sans-serif; 
+            background-color: #f5f7fa;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="max-w-7xl mx-auto">
+        <!-- 头部信息 -->
+        <div class="bg-white rounded-xl shadow-md p-4 mb-6">
+            <div class="flex justify-between items-center">
+                <h1 class="text-xl font-bold text-gray-800">mytext 设备控制面板</h1>
+                <div class="flex items-center gap-2">
+                    <span id="statusDot" class="w-3 h-3 rounded-full bg-gray-400"></span>
+                    <span id="statusText" class="text-gray-600">加载中...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 属性卡片区域 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <!-- 温度卡片 -->
+            <div class="property-card bg-white rounded-xl shadow p-6 cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300" 
+                 data-identifier="temperature" data-name="温度" data-unit="℃" data-color="#3b82f6">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                        <i class="fa fa-thermometer-half text-blue-500 text-xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-700">温度</h3>
+                </div>
+                <div class="text-3xl font-bold text-gray-800">
+                    <span id="temperature">0.0</span>
+                    <span class="text-lg font-normal text-gray-500">℃</span>
+                </div>
+                <p class="text-sm text-gray-400 mt-2">点击查看历史数据</p>
+            </div>
+
+            <!-- 湿度卡片 -->
+            <div class="property-card bg-white rounded-xl shadow p-6 cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+                 data-identifier="humidity" data-name="湿度" data-unit="%RH" data-color="#22c55e">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                        <i class="fa fa-tint text-green-500 text-xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-700">湿度</h3>
+                </div>
+                <div class="text-3xl font-bold text-gray-800">
+                    <span id="humidity">0.0</span>
+                    <span class="text-lg font-normal text-gray-500">%RH</span>
+                </div>
+                <p class="text-sm text-gray-400 mt-2">点击查看历史数据</p>
+            </div>
+
+            <!-- 二氧化碳卡片 -->
+            <div class="property-card bg-white rounded-xl shadow p-6 cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+                 data-identifier="co2" data-name="二氧化碳" data-unit="ppm" data-color="#f97316">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
+                        <i class="fa fa-wind text-orange-500 text-xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-700">二氧化碳</h3>
+                </div>
+                <div class="text-3xl font-bold text-gray-800">
+                    <span id="co2">0</span>
+                    <span class="text-lg font-normal text-gray-500">ppm</span>
+                </div>
+                <p class="text-sm text-gray-400 mt-2">点击查看历史数据</p>
+            </div>
+
+            <!-- LED卡片 -->
+            <div class="property-card bg-white rounded-xl shadow p-6 cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+                 data-identifier="LED" data-name="LED" data-unit="" data-color="#a855f7">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
+                        <i class="fa fa-lightbulb-o text-purple-500 text-xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-700">LED</h3>
+                </div>
+                <div class="text-3xl font-bold text-gray-800">
+                    <span id="LED">-</span>
+                </div>
+                <p class="text-sm text-gray-400 mt-2">点击查看历史数据</p>
+            </div>
+        </div>
+
+        <!-- 控制区域 -->
+        <div class="bg-white rounded-xl shadow p-6 mb-6">
+            <h3 class="text-lg font-semibold text-gray-700 mb-4">开关控制</h3>
+            <div class="flex items-center gap-4">
+                <p class="text-gray-600">当前开关状态：<span id="keyStatus" class="font-bold text-purple-600">关闭</span></p>
+            </div>
+            <div class="flex gap-4 mt-4">
+                <button id="openBtn" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium py-3 px-6 rounded-lg transition-colors">
+                    <i class="fa fa-power-off mr-2"></i>打开
+                </button>
+                <button id="closeBtn" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-6 rounded-lg transition-colors">
+                    <i class="fa fa-power-off mr-2"></i>关闭
+                </button>
+            </div>
+            <p id="controlTip" class="text-sm text-gray-400 mt-2 text-center"></p>
+        </div>
+
+        <p class="text-center text-xs text-gray-400">数据每10秒自动刷新</p>
+    </div>
+
+    <!-- 历史数据模态框 -->
+    <div id="historyModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl shadow-xl w-[90%] md:w-[80%] max-w-[800px] max-h-[90vh] overflow-auto">
+            <div class="p-6 border-b flex justify-between items-center">
+                <h3 id="modalTitle" class="text-xl font-bold text-gray-800">历史数据</h3>
+                <button id="closeModal" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="p-6">
+                <div id="historyChart" style="width: 100%; height: 400px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 配置信息
+        const config = {
+            token: "version=2018-10-31&res=products%2FAceV67og0i%2Fdevices%2Fmytext&et=1805693871&method=md5&sign=PEUKCtejaA%2By49Qw78sOfw%3D%3D",
+            productId: "AceV67og0i",
+            deviceName: "mytext",
+            api: {
+                deviceDetail: "https://iot-api.heclouds.com/device/detail",
+                getProperty: "https://iot-api.heclouds.com/thingmodel/query-device-property",
+                setProperty: "https://iot-api.heclouds.com/thingmodel/set-device-property",
+                getHistory: "https://iot-api.heclouds.com/thingmodel/query-device-property-history"
+            }
+        };
+
+        let chartInstance = null;
+
+        // 获取设备在线状态
+        async function getDeviceStatus() {
+            try {
+                const res = await fetch(`${config.api.deviceDetail}?product_id=${config.productId}&device_name=${config.deviceName}`, {
+                    headers: { "authorization": config.token }
+                });
+                const data = await res.json();
+                if (data.code === 0) {
+                    const status = data.data.status;
+                    const dot = document.getElementById("statusDot");
+                    const text = document.getElementById("statusText");
+                    if (status === 1) {
+                        dot.className = "w-3 h-3 rounded-full bg-green-500";
+                        text.textContent = "在线";
+                        text.className = "text-green-600";
+                    } else {
+                        dot.className = "w-3 h-3 rounded-full bg-gray-400";
+                        text.textContent = "离线";
+                        text.className = "text-gray-600";
+                    }
+                }
+            } catch (err) {
+                console.error("获取设备状态失败：", err);
+            }
+        }
+
+        // 获取设备当前属性
+        async function getDeviceProperties() {
+            try {
+                const res = await fetch(`${config.api.getProperty}?product_id=${config.productId}&device_name=${config.deviceName}`, {
+                    headers: { "authorization": config.token }
+                });
+                const data = await res.json();
+                if (data.code !== 0) {
+                    console.error("获取属性失败：", data.msg);
+                    return;
+                }
+                const list = data.data;
+                
+                // 解析各个属性值
+                const temperature = list.find(i => i.identifier === "temperature")?.value || 0;
+                const humidity = list.find(i => i.identifier === "humidity")?.value || 0;
+                const co2 = list.find(i => i.identifier === "co2")?.value || 0;
+                const led = list.find(i => i.identifier === "LED")?.value || "-";
+                const key = list.find(i => i.identifier === "key")?.value || false;
+
+                // 更新页面显示
+                document.getElementById("temperature").textContent = parseFloat(temperature).toFixed(1);
+                document.getElementById("humidity").textContent = parseFloat(humidity).toFixed(1);
+                document.getElementById("co2").textContent = parseInt(co2);
+                document.getElementById("LED").textContent = led;
+                document.getElementById("keyStatus").textContent = key ? "开启" : "关闭";
+            } catch (err) {
+                console.error("获取属性失败：", err);
+            }
+        }
+
+        // 控制开关
+        function controlSwitch(status) {
+            // 直接显示已执行，无需等待响应
+            document.getElementById("controlTip").textContent = "已执行";
+            setTimeout(() => {
+                document.getElementById("controlTip").textContent = "";
+            }, 2000);
+
+            // 后台发送控制指令
+            fetch(config.api.setProperty, {
+                method: "POST",
+                headers: {
+                    "authorization": config.token,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    product_id: config.productId,
+                    device_name: config.deviceName,
+                    params: { "key": status }
+                })
+            })
+            .then(res => res.json())
+            .then(() => {
+                // 指令发送后刷新数据
+                getDeviceProperties();
+            })
+            .catch(err => {
+                console.error("控制指令发送失败：", err);
+            });
+        }
+
+        // 加载历史数据
+        async function loadHistoryData(identifier, name, unit, color) {
+            const modal = document.getElementById("historyModal");
+            const title = document.getElementById("modalTitle");
+            title.textContent = `${name}历史数据`;
+            modal.classList.remove("hidden");
+
+            // 初始化图表
+            if (!chartInstance) {
+                chartInstance = echarts.init(document.getElementById("historyChart"));
+            }
+            chartInstance.showLoading();
+
+            try {
+                // 查询最近24小时的历史数据
+                const endTime = Date.now();
+                const startTime = endTime - 24 * 60 * 60 * 1000;
+
+                const res = await fetch(`${config.api.getHistory}?product_id=${config.productId}&device_name=${config.deviceName}&identifier=${identifier}&start_time=${startTime}&end_time=${endTime}&limit=100`, {
+                    headers: { "authorization": config.token }
+                });
+                const data = await res.json();
+                if (data.code !== 0) {
+                    alert("获取历史数据失败：" + data.msg);
+                    chartInstance.hideLoading();
+                    return;
+                }
+
+                const list = data.data.list || [];
+                // 反转数据，按时间正序排列
+                list.reverse();
+
+                // 处理数据格式
+                const times = list.map(item => {
+                    const date = new Date(parseInt(item.time));
+                    return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+                });
+                const values = list.map(item => {
+                    const val = item.value;
+                    return isNaN(val) ? val : parseFloat(val);
+                });
+
+                // 渲染图表
+                const option = {
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    grid: {
+                        left: '3%',
+                        right: '4%',
+                        bottom: '3%',
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: times,
+                        axisLabel: {
+                            rotate: 30
+                        }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: unit
+                    },
+                    series: [
+                        {
+                            name: name,
+                            type: 'line',
+                            data: values,
+                            smooth: true,
+                            itemStyle: {
+                                color: color
+                            },
+                            areaStyle: {
+                                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                    { offset: 0, color: color + '80' },
+                                    { offset: 1, color: color + '10' }
+                                ])
+                            }
+                        }
+                    ]
+                };
+                chartInstance.setOption(option, true);
+                chartInstance.hideLoading();
+
+                // 窗口大小变化时自适应图表
+                window.addEventListener('resize', () => {
+                    chartInstance.resize();
+                });
+            } catch (err) {
+                console.error("获取历史数据失败：", err);
+                alert("获取历史数据失败，请稍后重试");
+                chartInstance.hideLoading();
+            }
+        }
+
+        // 页面初始化
+        window.onload = () => {
+            // 初始加载数据
+            getDeviceStatus();
+            getDeviceProperties();
+
+            // 定时刷新数据，每10秒一次
+            setInterval(() => {
+                getDeviceStatus();
+                getDeviceProperties();
+            }, 10000);
+
+            // 绑定控制按钮事件
+            document.getElementById("openBtn").addEventListener("click", () => {
+                controlSwitch(true);
+            });
+            document.getElementById("closeBtn").addEventListener("click", () => {
+                controlSwitch(false);
+            });
+
+            // 绑定属性卡片点击事件
+            document.querySelectorAll(".property-card").forEach(card => {
+                card.addEventListener("click", () => {
+                    const identifier = card.dataset.identifier;
+                    const name = card.dataset.name;
+                    const unit = card.dataset.unit;
+                    const color = card.dataset.color;
+                    loadHistoryData(identifier, name, unit, color);
+                });
+            });
+
+            // 绑定模态框关闭事件
+            document.getElementById("closeModal").addEventListener("click", () => {
+                document.getElementById("historyModal").classList.add("hidden");
+            });
+            document.getElementById("historyModal").addEventListener("click", (e) => {
+                if (e.target === document.getElementById("historyModal")) {
+                    document.getElementById("historyModal").classList.add("hidden");
+                }
+            });
+        };
+    </script>
+</body>
+</html>
